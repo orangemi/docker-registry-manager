@@ -27,4 +27,7 @@ func init() {
 
 	// Routers for logs
 	beego.Router("/logs", &controllers.LogsController{}, "get:Get")
+
+	// Routers for scheduling
+	beego.Router("/schedule", &controllers.ScheduleController{}, "get:Get")
 }
