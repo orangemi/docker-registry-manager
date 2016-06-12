@@ -14,11 +14,38 @@
       </div>
       <div class="row">
         <ul class="nav nav-tabs" role="tablist" style="margin-bottom:20px;">
-          <li role="presentation" class="active"><a href="#stats" aria-controls="overview" role="tab" data-toggle="tab">Request Stats</a></li>
+          <li role="presentation" class="active"><a href="#about" aria-controls="overview" role="tab" data-toggle="tab">About</a></li>
+          <li role="presentation"><a href="#stats" aria-controls="overview" role="tab" data-toggle="tab">Request Stats</a></li>
         </ul>
-        <div role="tabpanel" class="tab-pane" id="stats">
-          <table id="stats-datatable" class="table table-striped table-bordered" cellspacing="0" width="100%">
-              <thead>
+        <div class="tab-content">
+          <div role="tabpanel" class="tab-pane active" id="about">
+              <p>
+                <a href="https://travis-ci.org/stefannaglee/docker-registry-manager"><img src="https://travis-ci.org/stefannaglee/docker-registry-manager.svg?branch=master" alt="Build Status" title="" /></a>
+                <a href="https://coveralls.io/github/stefannaglee/docker-registry-manager?branch=master"><img src="https://coveralls.io/repos/github/stefannaglee/docker-registry-manager/badge.svg?branch=master" alt="Coverage Status" title="" /></a>
+                <a href="https://godoc.org/github.com/stefannaglee/docker-registry-manager"><img src="https://godoc.org/github.com/stefannaglee/docker-registry-manager?status.svg" alt="GoDoc" title="" /></a>
+                <a href="https://github.com/stefannaglee/docker-registry-manager/releases/tag/{{.releaseVersion}}"><img src="https://img.shields.io/badge/Release-{{.releaseVersion}}-green.svg" alt="Release" title="" /></a>
+              </p>
+              <p>Wiki: <small> https://github.com/stefannaglee/docker-registry-manager/tree/master/resources/docs/wiki</small></p>
+              <p>Source: <small> https://github.com/stefannaglee/docker-registry-manager</small></p>
+              <p>Feature Requests: <small> https://github.com/stefannaglee/docker-registry-manager</small></p>
+              <p>Bug Report: <small> https://github.com/stefannaglee/docs/wiki/bug-report</small></p>
+          </div>
+          <div role="tabpanel" class="tab-pane" id="stats">
+            <table id="stats-datatable" class="table table-striped table-bordered" cellspacing="0" width="100%">
+                <thead>
+                    <tr>
+                      <th>Method</th>
+                      <th>Request URL</th>
+                      <th>Average Time</th>
+                      <th>Max Time</th>
+                      <th>Min Time</th>
+                      <th>Total Time</th>
+                      <th>Request Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+                <tfoot>
                   <tr>
                     <th>Method</th>
                     <th>Request URL</th>
@@ -28,21 +55,9 @@
                     <th>Total Time</th>
                     <th>Request Count</th>
                   </tr>
-              </thead>
-              <tbody>
-              </tbody>
-              <tfoot>
-                <tr>
-                  <th>Method</th>
-                  <th>Request URL</th>
-                  <th>Average Time</th>
-                  <th>Max Time</th>
-                  <th>Min Time</th>
-                  <th>Total Time</th>
-                  <th>Request Count</th>
-                </tr>
-              </tfoot>
-          </table>
+                </tfoot>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -96,24 +111,7 @@
         </tfoot>
     </table>
   </div>
-    <div class="row content-block white-bg">
-      <div class="row">
-        <h1>About</h1>
-        <hr>
-      </div>
-      <div class="row">
-        <p>
-          <a href="https://travis-ci.org/stefannaglee/docker-registry-manager"><img src="https://travis-ci.org/stefannaglee/docker-registry-manager.svg?branch=master" alt="Build Status" title="" /></a>
-          <a href="https://coveralls.io/github/stefannaglee/docker-registry-manager?branch=master"><img src="https://coveralls.io/repos/github/stefannaglee/docker-registry-manager/badge.svg?branch=master" alt="Coverage Status" title="" /></a>
-          <a href="https://godoc.org/github.com/stefannaglee/docker-registry-manager"><img src="https://godoc.org/github.com/stefannaglee/docker-registry-manager?status.svg" alt="GoDoc" title="" /></a>
-          <a href="https://github.com/stefannaglee/docker-registry-manager/releases/tag/{{.releaseVersion}}"><img src="https://img.shields.io/badge/Release-{{.releaseVersion}}-green.svg" alt="Release" title="" /></a>
-        </p>
-        <p>Wiki: <small> https://github.com/stefannaglee/docker-registry-manager/tree/master/resources/docs/wiki</small></p>
-        <p>Source: <small> https://github.com/stefannaglee/docker-registry-manager</small></p>
-        <p>Feature Requests: <small> https://github.com/stefannaglee/docker-registry-manager</small></p>
-        <p>Bug Report: <small> https://github.com/stefannaglee/docs/wiki/bug-report</small></p>
-      </div>
-    </div>
+
 
     <!--
     <div class="row content-block white-bg">
