@@ -7,7 +7,7 @@ import (
 
 func init() {
 	beego.Router("/", &controllers.RegistriesController{})
-	beego.Router("/.release", &controllers.SettingsController{})
+	beego.Router("/.release", &controllers.AdminController{})
 
 	// Routers for registries
 	beego.Router("/registries", &controllers.RegistriesController{})
@@ -29,13 +29,13 @@ func init() {
 	beego.Router("/registries/:registryName/repositories/*/tags/:tagName/images", &controllers.ImagesController{}, "get:GetImages")
 
 	// Routers for logs
-	beego.Router("/logs", &controllers.SettingsController{}, "get:GetLogs")
-	beego.Router("/logs/clear", &controllers.SettingsController{}, "post:ClearLogs")
-	beego.Router("/logs/archive", &controllers.SettingsController{}, "post:ArchiveLogs")
-	beego.Router("/logs/toggle-debug", &controllers.SettingsController{}, "get:ToggleDebug")
-	beego.Router("/logs/level", &controllers.SettingsController{}, "get:GetLogLevel")
+	beego.Router("/logs", &controllers.AdminController{}, "get:GetLogs")
+	beego.Router("/logs/clear", &controllers.AdminController{}, "post:ClearLogs")
+	beego.Router("/logs/archive", &controllers.AdminController{}, "post:ArchiveLogs")
+	beego.Router("/logs/toggle-debug", &controllers.AdminController{}, "get:ToggleDebug")
+	beego.Router("/logs/level", &controllers.AdminController{}, "get:GetLogLevel")
 
-	// Routers for settings
-	beego.Router("/settings", &controllers.SettingsController{}, "get:Get")
-	beego.Router("/settings/stats", &controllers.SettingsController{}, "get:GetLiveStatistics")
+	// Routers for admin
+	beego.Router("/admin", &controllers.AdminController{}, "get:Get")
+	beego.Router("/admin/stats", &controllers.AdminController{}, "get:GetLiveStatistics")
 }

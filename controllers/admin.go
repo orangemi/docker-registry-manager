@@ -8,25 +8,25 @@ import (
 	"github.com/stefannaglee/docker-registry-manager/utilities"
 )
 
-type SettingsController struct {
+type AdminController struct {
 	beego.Controller
 }
 
-func (c *SettingsController) Get() {
+func (c *AdminController) Get() {
 
 	c.Data["releaseVersion"] = utils.ReleaseVersion
 
-	c.TplName = "settings.tpl"
+	c.TplName = "admin.tpl"
 }
 
-func (c *SettingsController) GetLogs() {
+func (c *AdminController) GetLogs() {
 	logs := utils.ParseLogFile()
 
 	c.Data["json"] = &logs
 	c.ServeJSON()
 }
 
-func (c *SettingsController) ClearLogs() {
+func (c *AdminController) ClearLogs() {
 
 	err := utils.ClearLogFile()
 	if err == nil {
@@ -36,7 +36,7 @@ func (c *SettingsController) ClearLogs() {
 
 }
 
-func (c *SettingsController) ArchiveLogs() {
+func (c *AdminController) ArchiveLogs() {
 
 	err := utils.ArchiveLogFile()
 	if err == nil {
@@ -46,13 +46,13 @@ func (c *SettingsController) ArchiveLogs() {
 
 }
 
-func (c *SettingsController) ToggleDebug() {
+func (c *AdminController) ToggleDebug() {
 
 	utils.ToggleDebug()
 	c.CustomAbort(200, "Success")
 }
 
-func (c *SettingsController) GetLogLevel() {
+func (c *AdminController) GetLogLevel() {
 
 	currentLevel := utils.Log.Level
 	type level struct {
@@ -66,7 +66,7 @@ func (c *SettingsController) GetLogLevel() {
 
 }
 
-func (c *SettingsController) GetReleaseVersion() {
+func (c *AdminController) GetReleaseVersion() {
 
 	currentRelease := utils.ReleaseVersion
 	type ReleaseVersion struct {
@@ -81,7 +81,7 @@ func (c *SettingsController) GetReleaseVersion() {
 }
 
 // GetLiveStatistics returns stats on request information tracked by beego
-func (c *SettingsController) GetLiveStatistics() {
+func (c *AdminController) GetLiveStatistics() {
 
 	r := toolbox.StatisticsMap
 	rs := r.GetMapData()

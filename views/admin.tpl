@@ -4,7 +4,7 @@
     <div class="header">
       <ol class="breadcrumb">
         <li><a href="/">Home</a></li>
-        <li class="active">Settings</li>
+        <li class="active">Admin</li>
       </ol>
     </div>
     <div class="row content-block white-bg">
@@ -132,7 +132,7 @@
 
 
     // Get the stats data table stats
-    $.getJSON( "/settings/stats", function( data ) {
+    $.getJSON( "/admin/stats", function( data ) {
       $.each( data, function( i, item ) {
         console.log(item);
         var $tr = $('<tr>').append(
