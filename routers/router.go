@@ -38,4 +38,7 @@ func init() {
 	// Routers for settings
 	beego.Router("/settings", &controllers.SettingsController{}, "get:Get")
 	beego.Router("/settings/stats", &controllers.SettingsController{}, "get:GetLiveStatistics")
+
+	// Routers for accept of events from the registries
+	beego.Router("/registries/events", &controllers.EventsController{}, "post:PostEvents")
 }
