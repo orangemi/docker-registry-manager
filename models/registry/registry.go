@@ -28,6 +28,7 @@ type Registry struct {
 	Version string
 
 	Metadata
+	Repositories []Repository
 }
 
 // Metadata contains registry metadata information such as the current repository count and number of tags
