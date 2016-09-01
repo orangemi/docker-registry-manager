@@ -6,7 +6,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-// TestParseRegistry passes the ParseRegistry function a valid and invalid string
+// TestAddRegistry tests the AddRegistry function
 func TestParseRegistry(t *testing.T) {
 
 	validRegistryURI := "https://host.domain.com:5000"
@@ -17,17 +17,16 @@ func TestParseRegistry(t *testing.T) {
 		Port:   "5000",
 	}
 
-	// Test the response error and use a deep equals comparison on the returned Registry
-	registryResponse, err := ParseRegistry(validRegistryURI)
-	Convey("When we pass a valid RegistryURI we should get back the registry type without an errors", t, func() {
+	err := AddRegistry(validRegistryURI)
+	Convey("When we attempt to add a valid registry "+validRegistryURI+" we should receive no errors and have the registry cached.", t, func() {
 		So(err, ShouldBeNil)
-		So(registryResponse.Name, ShouldEqual, expectedRegistryResponse.Name)
-		So(registryResponse.Scheme, ShouldEqual, expectedRegistryResponse.Scheme)
-		So(registryResponse.Port, ShouldEqual, expectedRegistryResponse.Port)
+		So(ActiveRegistries[expectedRegistryResponse.Name].Name, ShouldEqual, expectedRegistryResponse.Name)
+		So(ActiveRegistries[expectedRegistryResponse.Name].Scheme, ShouldEqual, expectedRegistryResponse.Scheme)
+		So(ActiveRegistries[expectedRegistryResponse.Name].Port, ShouldEqual, expectedRegistryResponse.Port)
 	})
 
 	invalidRegistryURI := "192.168.1.2:5000"
-	registryResponse, err = ParseRegistry(invalidRegistryURI)
+	err = AddRegistry(invalidRegistryURI)
 	// Test the response error
 	Convey("When we pass an invalid RegistryURI we should get back the registry type with errors", t, func() {
 		So(err, ShouldNotBeNil)
