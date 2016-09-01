@@ -15,6 +15,8 @@ type Repository struct {
 	Name       string
 	EncodedURI string
 	TagCount   int
+
+	Tags []Tag
 }
 
 // GetRepositories returns a slice of repositories with their names and encoded names

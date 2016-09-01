@@ -2,7 +2,6 @@ package registry
 
 import (
 	"encoding/json"
-	"errors"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -115,24 +114,26 @@ type V1Compatibility struct {
 	"history": <v1 images>,
 	"signature": <JWS>
 */
-func GetImage(registryName string, repositoryName string, tagName string) (Image, error) {
+func GetImage(registry *Registry, repository *Repository, tag *Tag) (Image, error) {
 
-	// Check if the registry is listed as active
-	if _, ok := ActiveRegistries[registryName]; !ok {
-		return Image{}, errors.New(registryName + " was not found within the active list of registries.")
-	}
-	r := ActiveRegistries[registryName]
+	img := Image{}
 
 	// Create and execute Get request
-	response, err := http.Get(r.GetURI() + "/" + repositoryName + "/manifests/" + tagName)
-
-	if response.StatusCode != 200 {
+	response, err := http.Get(registry.GetURI() + "/" + repository.Name + "/manifests/" + tag.Name)
+	if err != nil {
+		utils.Log.WithFields(logrus.Fields{
+			"Registry URL": registry.GetURI(),
+			"Error":        err,
+			"Possible Fix": "Check to see if your registry is up, and serving on the correct port with 'docker ps'. ",
+		}).Error("Get request to registry failed for the manifests endpoint.")
+		return img, err
+	} else if response.StatusCode != 200 {
 		utils.Log.WithFields(logrus.Fields{
 			"Error":       err,
 			"Status Code": response.StatusCode,
 			"Response":    response,
 		}).Error("Did not receive an ok status code!")
-		return Image{}, err
+		return img, err
 	}
 
 	// Close connection
@@ -145,14 +146,13 @@ func GetImage(registryName string, repositoryName string, tagName string) (Image
 			"Error": err,
 			"Body":  body,
 		}).Error("Unable to read response into body!")
-		return Image{}, err
+		return img, err
 	}
-	img := Image{}
 	if err := json.Unmarshal(body, &img); err != nil {
 		utils.Log.WithFields(logrus.Fields{
 			"Error": err,
 		}).Error("Unable to unmarshal JSON!")
-		return Image{}, err
+		return img, err
 	}
 
 	// V1 compatibility is an escape string, so convert it to JSON and then update the key
@@ -180,11 +180,8 @@ func GetImage(registryName string, repositoryName string, tagName string) (Image
 
 	// Update each FsLayer size
 	for index, layer := range img.FsLayers {
-
-		// Check if the registry is listed as active
-		r := ActiveRegistries[registryName]
 		// Create and execute Get request
-		response, _ := http.Head(r.GetURI() + "/" + repositoryName + "/blobs/" + layer.BlobSum)
+		response, _ := http.Head(registry.GetURI() + "/" + repository.Name + "/blobs/" + layer.BlobSum)
 		if err != nil {
 			utils.Log.Error(err)
 		}
