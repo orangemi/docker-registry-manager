@@ -5,8 +5,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
-	"net/url"
-	"sort"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -15,13 +13,12 @@ import (
 )
 
 // Tags contains a slice of tags for the given repository
-// https://github.com/docker/distribution/blob/master/docs/spec/api.md#listing-image-tags
 type Tags struct {
 	Name string
-	Tags []string
+	Tags []Tag
 }
 
-type TagForView struct {
+type Tag struct {
 	ID              string
 	Name            string
 	UpdatedTime     time.Time
@@ -32,46 +29,64 @@ type TagForView struct {
 	SizeInt         int64
 }
 
-// TagsForView contains a slice of TagsForView with the methods required to sort
-type TagsForView []TagForView
+// GetTags returns the tags for the given repository
+// https://github.com/docker/distribution/blob/master/docs/spec/api.md#listing-image-tags
+func GetTags(registry *Registry, repository *Repository) (Tags, error) {
 
-func (slice TagsForView) Len() int {
-	return len(slice)
-}
+	ts := Tags{}
 
-func (slice TagsForView) Less(i, j int) bool {
-	return slice[i].Name < slice[j].Name
-}
+	// Create and execute Get request
+	response, err := http.Get(registry.GetURI() + "/" + repository.Name + "/tags/list")
+	defer response.Body.Close()
+	if err != nil {
+		utils.Log.WithFields(logrus.Fields{
+			"Registry URL": registry.GetURI(),
+			"Error":        err,
+			"Possible Fix": "Check to see if your registry is up, and serving on the correct port with 'docker ps'. ",
+		}).Error("Get request to registry failed for the tags endpoint.")
+		return ts, err
+	} else if response.StatusCode != 200 {
+		utils.Log.WithFields(logrus.Fields{
+			"Error":       err,
+			"Status Code": response.StatusCode,
+			"Response":    response,
+		}).Error("Did not receive an ok status code!")
+		return ts, err
+	}
 
-func (slice TagsForView) Swap(i, j int) {
-	slice[i], slice[j] = slice[j], slice[i]
-}
+	// Read response into byte body
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		utils.Log.WithFields(logrus.Fields{
+			"Error": err,
+			"Body":  body,
+		}).Error("Unable to read response into body!")
+		return ts, err
+	}
 
-// GetTagsForView returns the sanitized tag structs with the required information for the tags template
-func GetTagsForView(registryName string, repositoryName string) (TagsForView, error) {
-	tagObj, err := GetTags(registryName, repositoryName)
-	tags := TagsForView{}
+	// Unmarshal JSON into the tag response struct containing a slice of tags
+	if err := json.Unmarshal(body, &ts); err != nil {
+		utils.Log.WithFields(logrus.Fields{
+			"Error":         err,
+			"Response Body": string(body),
+		}).Error("Unable to unmarshal JSON!")
+		return ts, err
+	}
 
-	tagChan := make(chan TagForView)
-
-	// Loop through each tag to build the TagForView type
-	for _, tagName := range tagObj.Tags {
-
-		go func(tagName string) {
+	// Get the tag metadata information
+	tagChan := make(chan *Tag)
+	for _, tag := range ts.Tags {
+		go func(tag *Tag) {
 			// Created a new tag for view type to fill
-			t := TagForView{}
 			var tempSize int64
 			var maxTime time.Time
 
 			// Get the image information for each tag
-			img, _ := GetImage(registryName, repositoryName, tagName)
+			img, _ := GetImage(registry, repository, tag)
 
 			for _, layer := range img.FsLayers {
-
-				// Check if the registry is listed as active
-				r := ActiveRegistries[registryName]
 				// Create and execute Get request
-				response, _ := http.Head(r.GetURI() + "/" + repositoryName + "/blobs/" + layer.BlobSum)
+				response, _ := http.Head(registry.GetURI() + "/" + repository.Name + "/blobs/" + layer.BlobSum)
 				if err != nil {
 					utils.Log.Error(err)
 				}
@@ -85,86 +100,24 @@ func GetTagsForView(registryName string, repositoryName string) (TagsForView, er
 			}
 
 			// Set the fields
-			t.Size = bytefmt.ByteSize(uint64(tempSize))
-			t.SizeInt = tempSize
-			t.UpdatedTime = maxTime
-			t.UpdatedTimeUnix = maxTime.Unix()
-			t.Layers = len(img.History)
-			t.Name = tagName
-			t.TimeAgo = utils.TimeAgo(maxTime)
+			tag.Size = bytefmt.ByteSize(uint64(tempSize))
+			tag.SizeInt = tempSize
+			tag.UpdatedTime = maxTime
+			tag.UpdatedTimeUnix = maxTime.Unix()
+			tag.Layers = len(img.History)
+			tag.TimeAgo = utils.TimeAgo(maxTime)
 
-			// Append to the tags list that will be passed to the template
-			tagChan <- t
-
-		}(tagName)
+			tagChan <- tag
+		}(&tag)
 
 	}
 
-	var TagInformation TagsForView
 	// Wait for each of the requests and append to the returned tag information
-	for i := 0; i < len(tagObj.Tags); i++ {
-		tag := <-tagChan
-		TagInformation = append(TagInformation, tag)
+	for i := 0; i < len(ts.Tags); i++ {
+		<-tagChan
 	}
 	close(tagChan)
-	sort.Sort(sort.Reverse(tags))
 
-	return TagInformation, err
-}
-
-// GetTags returns a slice of tags for a given repository and registry
-func GetTags(registryName string, repositoryName string) (Tags, error) {
-
-	repositoryName, _ = url.QueryUnescape(repositoryName)
-
-	// Check if the registry is listed as active
-	if _, ok := ActiveRegistries[registryName]; !ok {
-		return Tags{}, errors.New(registryName + " was not found within the active list of registries.")
-	}
-	r := ActiveRegistries[registryName]
-
-	// Create and execute Get request
-	response, err := http.Get(r.GetURI() + "/" + repositoryName + "/tags/list")
-	if err != nil {
-		utils.Log.WithFields(logrus.Fields{
-			"Registry URL": string(r.GetURI()),
-			"Error":        err,
-			"Possible Fix": "Check to see if your registry is up, and serving on the correct port with 'docker ps'. ",
-		}).Error("Get request to registry failed for the tags endpoint.")
-		return Tags{}, err
-	}
-
-	// Check Status code
-	if response.StatusCode != 200 {
-		utils.Log.WithFields(logrus.Fields{
-			"Error":       err,
-			"Status Code": response.StatusCode,
-			"Response":    response,
-		}).Error("Did not receive an ok status code!")
-		return Tags{}, err
-	}
-
-	// Close connection
-	defer response.Body.Close()
-
-	// Read response into byte body
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		utils.Log.WithFields(logrus.Fields{
-			"Error": err,
-			"Body":  body,
-		}).Error("Unable to read response into body!")
-		return Tags{}, err
-	}
-	ts := Tags{}
-	// Unmarshal JSON into the tag response struct containing an array of tags
-	if err := json.Unmarshal(body, &ts); err != nil {
-		utils.Log.WithFields(logrus.Fields{
-			"Error":         err,
-			"Response Body": string(body),
-		}).Error("Unable to unmarshal JSON!")
-		return ts, err
-	}
 	return ts, nil
 }
 
@@ -173,22 +126,12 @@ func GetTags(registryName string, repositoryName string) (Tags, error) {
 //
 // Documentation:
 // DELETE	/v2/<name>/manifests/<reference>	Manifest	Delete the manifest identified by name and reference. Note that a manifest can only be deleted by digest.
-func DeleteTag(registryName string, repositoryName string, tag string) (bool, error) {
-
-	repositoryName, _ = url.QueryUnescape(repositoryName)
-
-	// Check if the registry is listed as active
-	if _, ok := ActiveRegistries[registryName]; !ok {
-		return false, errors.New(registryName + " was not found within the active list of registries.")
-	}
-	r := ActiveRegistries[registryName]
-
-	// Check if the tag exists. If it does not we cannot get the digest from it
-	client := &http.Client{}
-	req, _ := http.NewRequest("HEAD", r.GetURI()+"/"+repositoryName+"/manifests/"+tag, nil)
+func DeleteTag(registry *Registry, repository *Repository, tag Tag) error {
 
 	// Note When deleting a manifest from a registry version 2.3 or later, the following header must be used when HEAD or GET-ing the manifest to obtain the correct digest to delete:
 	// Accept: application/vnd.docker.distribution.manifest.v2+json
+	client := &http.Client{}
+	req, _ := http.NewRequest("HEAD", registry.GetURI()+"/"+repository.Name+"/manifests/"+tag.Name, nil)
 	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
 
 	// Execute the request
@@ -200,7 +143,7 @@ func DeleteTag(registryName string, repositoryName string, tag string) (bool, er
 			"Tag":      tag,
 			"Response": resp,
 		}).Error("Could not delete tag! Could not head the tag.")
-		return false, existsErr
+		return existsErr
 	}
 
 	// Make sure the digest exists in the header. If it does, attempt the deletion
@@ -210,7 +153,7 @@ func DeleteTag(registryName string, repositoryName string, tag string) (bool, er
 			// Create and execute DELETE request
 			digest := resp.Header["Docker-Content-Digest"][0]
 			client := &http.Client{}
-			req, _ := http.NewRequest("DELETE", r.GetURI()+"/"+repositoryName+"/manifests/"+digest, nil)
+			req, _ := http.NewRequest("DELETE", registry.GetURI()+"/"+repository.Name+"/manifests/"+digest, nil)
 			req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
 			resp, err := client.Do(req)
 			if err != nil || resp.StatusCode != 200 {
@@ -219,7 +162,7 @@ func DeleteTag(registryName string, repositoryName string, tag string) (bool, er
 					"Tag":      tag,
 					"Response": resp,
 				}).Error("Could not delete tag!")
-				return false, err
+				return err
 			}
 		}
 
@@ -229,51 +172,8 @@ func DeleteTag(registryName string, repositoryName string, tag string) (bool, er
 			"Tag":      tag,
 			"Response": resp,
 		}).Error("Could not delete tag!")
-		return false, errors.New("No digest gotten from response header")
+		return errors.New("No digest gotten from response header")
 	}
 
-	return true, nil
-}
-
-// Get tag returns a TagForView based on the passed tag name
-func GetTag(registryName string, repositoryName string, tagName string) (TagForView, error) {
-
-	// Created a new tag for view type to fill
-	t := TagForView{}
-	var tempSize int64
-	var maxTime time.Time
-
-	// Get the image information for each tag
-	img, _ := GetImage(registryName, repositoryName, tagName)
-
-	for _, layer := range img.FsLayers {
-
-		// Check if the registry is listed as active
-		r := ActiveRegistries[registryName]
-		// Create and execute Get request
-		response, err := http.Head(r.GetURI() + "/" + repositoryName + "/blobs/" + layer.BlobSum)
-		if err != nil {
-			utils.Log.Error(err)
-			return t, err
-		}
-		tempSize += response.ContentLength
-	}
-	// Get the latest creation time and total the size for the tag image
-	for _, history := range img.History {
-		if history.V1Compatibility.Created.After(maxTime) {
-			maxTime = history.V1Compatibility.Created
-		}
-	}
-
-	// Set the fields
-	t.Size = bytefmt.ByteSize(uint64(tempSize))
-	t.SizeInt = tempSize
-	t.UpdatedTime = maxTime
-	t.UpdatedTimeUnix = maxTime.Unix()
-	t.Layers = len(img.History)
-	t.Name = tagName
-	t.TimeAgo = utils.TimeAgo(maxTime)
-
-	return t, nil
-
+	return nil
 }
