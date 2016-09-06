@@ -51,7 +51,7 @@ func GetRepositories(registry *Registry) ([]Repository, error) {
 	}
 
 	// Unmarshal JSON into a slice of repository names
-	var repositoryNames []string
+	var repositoryNames map[string][]string
 	if err := json.Unmarshal(body, &repositoryNames); err != nil {
 		utils.Log.WithFields(logrus.Fields{
 			"Error":         err,
@@ -62,7 +62,7 @@ func GetRepositories(registry *Registry) ([]Repository, error) {
 
 	// Create the new repository objects keyed off of their name
 	var repositories []Repository
-	for _, name := range repositoryNames {
+	for _, name := range repositoryNames["repositories"] {
 		r := Repository{
 			EncodedURI: url.QueryEscape(name),
 			Name:       name,
